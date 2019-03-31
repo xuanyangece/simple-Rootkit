@@ -7,10 +7,10 @@
 #define TARGETFILE "/tmp/passwd"
 
 int main(int argc, char **argv) {
-  // #1: print own process ID
+  // Attack 1: print own process ID
   printf("sneaky_process pid = %d\n", getpid());
 
-  // #2: step 1 - copy from source to target
+  // Attack 2: step 1 - copy from source to target
   FILE *source, *target;
   source = fopen(SOURCEFILE, "r");
   if (source == NULL) {
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   }
 
   target = fopen(TARGETFILE, "w");
-  if (source == NULL) {
+  if (target == NULL) {
     fclose(source);
     printf("Cannot open target file...\n");
     exit(EXIT_FAILURE);
@@ -35,6 +35,14 @@ int main(int argc, char **argv) {
 
   fclose(source);
   fclose(target);
+
+  // Attack 2: step 2 - update source file
+  FILE *update;
+  update = fopen(SOURCEFILE, "a");
+  if (update == NULL) {
+    printf("Cannot open update file...\n");
+    exit(EXIT_FAILURE);
+  }
 
   return 0;
 }
