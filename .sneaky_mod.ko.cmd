@@ -1,0 +1,1 @@
+cmd_/home/xy91/650/hw5/sneaky_mod.ko := ld -r -m elf_x86_64 -z max-page-size=0x200000 -T ./scripts/module-common.lds --build-id  -o /home/xy91/650/hw5/sneaky_mod.ko /home/xy91/650/hw5/sneaky_mod.o /home/xy91/650/hw5/sneaky_mod.mod.o ;  true
