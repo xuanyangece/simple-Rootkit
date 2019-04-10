@@ -104,7 +104,7 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp,
 }
 
 /* Own version of read */
-asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {
+asmlinkage ssize_t sneaky_sys_read(int fd, void *buf, size_t count) {
   return original_read(fd, buf, count);
 }
 
